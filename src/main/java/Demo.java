@@ -13,39 +13,61 @@ public class Demo {
     private static final String DIR = "/Users/nexus/Desktop/Java/FileStorageAndProcessing/data";
 
     public static void main(String[] args) throws InterruptedException, IOException {
-        LogFileSegment<Item> fileSegment = new LogFileSegment<Item>(DIR, "tracking-service", 5);
+
+        LogFile logFile = new LogFile(DIR, "tracking-service");
+
         List<Thread> threads = new ArrayList<>();
-        for (int i=0;i<4;i++){
-            threads.add(new GenerateLogItem(fileSegment));
+        for (int i = 0; i < 4; i++) {
+            threads.add(new GenerateLogItem(logFile));
             threads.get(i).start();
         }
 
-        for (int i=0;i<4;i++) {
+        for (int i = 0; i < 4; i++) {
             threads.get(i).join();
         }
 
-        System.out.println("Offset 2: \n" + fileSegment.read(2));
-        System.out.println("Offset 10: \n" + fileSegment.read(10));
-        System.out.println("Offset 3: \n" + fileSegment.read(3));
-        System.out.println("Offset 15: \n" + fileSegment.read(15));
-        System.out.println("Offset 11: \n" + fileSegment.read(11));
-        System.out.println("Offset 199: \n" + fileSegment.read(199));
+        System.out.println("Offset 2: \n" + logFile.read(2));
+        System.out.println("Offset 10: \n" + logFile.read(10));
+        System.out.println("Offset 3: \n" + logFile.read(3));
+        System.out.println("Offset 15: \n" + logFile.read(15));
+        System.out.println("Offset 11: \n" + logFile.read(11));
+        System.out.println("Offset 199: \n" + logFile.read(199));
 
+    }
+
+    private static void multithreadListInsertion() throws InterruptedException {
+        List<Integer> list = new ArrayList<Integer>();
+        List<Thread> threads = new ArrayList<Thread>();
+
+        for (int i = 0; i < NUM_THREADS; i++) {
+            threads.add(new ArrayThread(list));
+        }
+
+        for (int i = 0; i < NUM_THREADS; i++) {
+            threads.get(i).start();
+        }
+
+        for (int i = 0; i < NUM_THREADS; i++) {
+            threads.get(i).join();
+        }
+
+        System.out.println("Actual List length is: " + list.size());
+        System.out.println("Expected List length is: " + NUM_THREADS * WORK_PER_THREAD);
     }
 
     private static class GenerateLogItem extends Thread {
 
-        private final LogFileSegment<Item> logFileSegment;
+        private final LogFile logFile;
 
-        public GenerateLogItem(LogFileSegment<Item> logFileSegment) {
-            this.logFileSegment = logFileSegment;
+        public GenerateLogItem(LogFile logFile) {
+            this.logFile = logFile;
         }
 
         @SneakyThrows
         @Override
         public void run() {
-            for (int i=0;i<50;i++) {
-                logFileSegment.append(new Item(Thread.currentThread().getName(), new Random().nextInt()));
+            for (int i = 0; i < 50; i++) {
+                logFile.write(new Item(Thread.currentThread().getName(), new Random().nextInt()));
             }
         }
 
@@ -53,33 +75,13 @@ public class Demo {
 
     @Getter
     private static class Item {
-        private String name;
-        private int price;
+        private final String name;
+        private final int price;
 
         public Item(String name, int price) {
             this.name = name;
             this.price = price;
         }
-    }
-
-    private static void multithreadListInsertion() throws InterruptedException {
-        List<Integer> list = new ArrayList<Integer>();
-        List<Thread> threads = new ArrayList<Thread>();
-
-        for (int i=0;i<NUM_THREADS;i++) {
-            threads.add(new ArrayThread(list));
-        }
-
-        for (int i=0;i<NUM_THREADS;i++) {
-            threads.get(i).start();
-        }
-
-        for (int i=0;i<NUM_THREADS;i++) {
-            threads.get(i).join();
-        }
-
-        System.out.println("Actual List length is: " + list.size());
-        System.out.println("Expected List length is: " + NUM_THREADS*WORK_PER_THREAD);
     }
 
     private static class ArrayThread extends Thread {
@@ -94,7 +96,7 @@ public class Demo {
 
         @Override
         public void run() {
-            for (int i=0;i<WORK_PER_THREAD;i++) {
+            for (int i = 0; i < WORK_PER_THREAD; i++) {
                 this.list.add(random.nextInt());
             }
         }

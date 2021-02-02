@@ -18,8 +18,7 @@ public class LogFileSegment {
     private static final String DOT = ".";
 
     private final String directory;
-    private final String fileNamePrefix;
-    private final int segmentStartOffset;
+    private final SegmentNameEntity segmentNameEntity;
 
     @Value("${segment.file.size}")
     private Long maxFileSizeInBytes;
@@ -28,10 +27,9 @@ public class LogFileSegment {
     private Path segmentIndexFilePath;
     private long messageOffset = 0;
 
-    public LogFileSegment(String directory, String fileNamePrefix, Integer offset) throws IOException {
+    public LogFileSegment(String directory, SegmentNameEntity segmentNameEntity) throws IOException {
         this.directory = directory;
-        this.fileNamePrefix = fileNamePrefix;
-        this.segmentStartOffset = offset;
+        this.segmentNameEntity = segmentNameEntity;
         this.init();
     }
 
@@ -88,7 +86,7 @@ public class LogFileSegment {
     }
 
     private Path createSegmentLogFileIfNotExists() throws IOException {
-        Path path = Paths.get(directory, this.fileNamePrefix + this.segmentStartOffset + DOT + LOG_FILE_EXTENSION);
+        Path path = Paths.get(directory, this.segmentNameEntity.toString() + DOT + LOG_FILE_EXTENSION);
         try {
             log.debug("Creating segment log file at path: {}", path.toString());
             Path filePath = Files.createFile(path);
@@ -104,7 +102,7 @@ public class LogFileSegment {
     }
 
     private Path createSegmentIndexFileIfNotExists() throws IOException {
-        Path path = Paths.get(directory, this.fileNamePrefix + this.segmentStartOffset + DOT + INDEX_FILE_EXTENSION);
+        Path path = Paths.get(directory, this.segmentNameEntity.toString() + DOT + INDEX_FILE_EXTENSION);
         try {
             log.debug("Creating segment index file at path: {}", path.toString());
             Path filePath = Files.createFile(path);

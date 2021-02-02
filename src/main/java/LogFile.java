@@ -1,57 +1,69 @@
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.stream.Stream;
 
 @Slf4j
 @Getter
 public class LogFile {
-
-    private String name;
-
     private static final String SEGMENT = "segment";
+    private static final String DOT = ".";
 
-    LogFileSegment currentLogFileSegment;
+    private final String name;
 
-    @Value("${data.dir.path}")
-    private String dataDirPath;
+    private final String dataDirPath;
 
-    public LogFile(String name) throws IOException {
+    private LogFileSegment currentLogFileSegment;
+    private Path logDirPath;
+
+    public LogFile(String dataDirPath, String name) throws IOException {
+        this.dataDirPath = dataDirPath;
         this.name = name;
         this.init();
     }
 
+    public void write(Object payload) throws IOException {
+        this.currentLogFileSegment.append(payload);
+    }
+
+    public String read(int offset) throws IOException {
+        return this.currentLogFileSegment.read(offset);
+    }
+
     private void init() throws IOException {
-
-//        Stream<Path> paths = Files.list(logDirPath);
-//
-//        paths.anyMatch(path -> path.getFileName().startsWith(SEGMENT))
-//
-
-
-
+        this.logDirPath = this.getLogDirOrCreateIfNotExists();
+        this.currentLogFileSegment = this.getLatestOrCreateSegmentIfNotExists();
     }
 
     private LogFileSegment getLatestOrCreateSegmentIfNotExists() throws IOException {
         Path logDirPath = Paths.get(this.dataDirPath, this.name);
-        Stream<Path> paths = Files.list(logDirPath);
+        Path[] paths = Files.list(logDirPath).filter(path -> path.getFileName().startsWith(SEGMENT)).toArray(Path[]::new);
 
-        if (paths.count() == 0) {
-            this.currentLogFileSegment = new LogFileSegment(logDirPath.toString(), SEGMENT, 0);
+        if (paths.length == 0) {
+            return new LogFileSegment(logDirPath.toString(), new SegmentNameEntity(0));
+        } else {
+            long maxOffsetSoFar = Long.MIN_VALUE;
+            SegmentNameEntity segmentNameEntityOfInterest = null;
+
+            for (Path path : paths) {
+                String fileName = path.getFileName().toString();
+                int indexOfDot = fileName.indexOf(DOT);
+                SegmentNameEntity segmentNameEntity = SegmentNameEntity.from(fileName.substring(0, fileName.length() - 1 - indexOfDot));
+
+                if (segmentNameEntity.getMessageOffset() > maxOffsetSoFar) {
+                    maxOffsetSoFar = segmentNameEntity.getMessageOffset();
+                    segmentNameEntityOfInterest = segmentNameEntity;
+                }
+            }
+
+            return new LogFileSegment(logDirPath.toString(), segmentNameEntityOfInterest);
         }
-        else {
-
-        }
-
     }
 
-    private void setupLogDirIfNotExists() throws IOException {
+    private Path getLogDirOrCreateIfNotExists() throws IOException {
         Path logDirPath = Paths.get(this.dataDirPath, this.name);
         log.debug(String.format("Checking if logDir already exists for %s", this.name));
         if (!Files.exists(logDirPath)) {
@@ -62,11 +74,10 @@ public class LogFile {
                 log.error(String.format("Failed to create logDir for %s at path: %s", this.name, logDirPath.toString()));
                 throw ex;
             }
-        }
-        else {
+        } else {
             log.debug(String.format("LogDir already exists for %s", this.name));
         }
+
+        return logDirPath;
     }
-
-
 }
