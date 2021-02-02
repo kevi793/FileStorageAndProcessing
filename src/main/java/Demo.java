@@ -66,7 +66,7 @@ public class Demo {
         @SneakyThrows
         @Override
         public void run() {
-            for (int i = 0; i < 50; i++) {
+            for (int i = 0; i < 20; i++) {
                 logFile.write(new Item(Thread.currentThread().getName(), new Random().nextInt()));
             }
         }

@@ -1,6 +1,5 @@
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,9 +19,6 @@ public class LogFileSegment {
     private final String directory;
     private final SegmentNameEntity segmentNameEntity;
 
-    @Value("${segment.file.size}")
-    private Long maxFileSizeInBytes;
-
     private Path segmentLogFilePath;
     private Path segmentIndexFilePath;
     private long messageOffset = 0;
@@ -33,11 +29,11 @@ public class LogFileSegment {
         this.init();
     }
 
-    public boolean canAcceptLogMessage(int incomingMessageLength) throws IOException {
-        return Files.size(this.segmentLogFilePath) + incomingMessageLength <= this.maxFileSizeInBytes;
+    public long getSegmentLogFileSize() throws IOException {
+        return Files.size(this.segmentLogFilePath);
     }
 
-    public synchronized void append(Object payload) throws IOException {
+    public void append(Object payload) throws IOException {
         long currentSegmentLogFileSize = Files.size(this.segmentLogFilePath);
         String logMessageString = this.appendNewLineInTheEnd(new LogMessage(this.messageOffset, payload).toString());
         Files.write(this.segmentLogFilePath, logMessageString.getBytes(), StandardOpenOption.APPEND);
@@ -48,9 +44,9 @@ public class LogFileSegment {
         this.messageOffset++;
     }
 
-    public String read(int offset) throws IOException {
+    public String read(long offset) throws IOException {
         List<String> indexFileLines = Files.readAllLines(this.segmentIndexFilePath);
-        LogIndexEntity logIndexEntity = LogIndexEntity.from(indexFileLines.get(offset));
+        LogIndexEntity logIndexEntity = LogIndexEntity.from(indexFileLines.get((int)offset));
 
         File segmentLogFile = new File(this.segmentLogFilePath.toString());
         RandomAccessFile randomAccessFile = new RandomAccessFile(segmentLogFile, "r");
