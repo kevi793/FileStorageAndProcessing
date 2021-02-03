@@ -1,3 +1,5 @@
+import cache.Cache;
+import cache.FIFOCache;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -15,31 +17,27 @@ public class LogFile {
     public static final String EMPTY_STRING = "";
     private static final String SEGMENT = "segment";
     private static final String DOT = ".";
+
     private final String name;
     private final String dataDirPath;
     private final Long maxSegmentLogFileSizeInBytes;
+    private final Cache<SegmentNameEntity, LogFileSegment> logFileSegmentCache;
 
     private LogFileSegment currentLogFileSegment;
     private Path logDirPath;
 
-    public LogFile(String dataDirPath, String name, Long maxSegmentLogFileSizeInBytes) throws IOException {
+    public LogFile(String dataDirPath, String name, Long maxSegmentLogFileSizeInBytes, Integer logFileSegmentCacheSize) throws IOException {
         this.dataDirPath = dataDirPath;
         this.name = name;
         this.maxSegmentLogFileSizeInBytes = maxSegmentLogFileSizeInBytes;
-        this.init();
-    }
-
-    public LogFile(String dataDirPath, String name) throws IOException {
-        this.dataDirPath = dataDirPath;
-        this.name = name;
-        this.maxSegmentLogFileSizeInBytes = DEFAULT_MAX_SEGMENT_LOG_FILE_SIZE_IN_BYTES;
+        this.logFileSegmentCache = new FIFOCache<>(logFileSegmentCacheSize);
         this.init();
     }
 
     public synchronized void write(Object payload) throws IOException {
 
         if (this.currentLogFileSegment.getSegmentLogFileSize() >= this.maxSegmentLogFileSizeInBytes) {
-            this.currentLogFileSegment = new LogFileSegment(this.logDirPath.toString(), new SegmentNameEntity(this.currentLogFileSegment.getMessageOffset() + this.currentLogFileSegment.getSegmentNameEntity().getMessageOffset()));
+            this.currentLogFileSegment = this.getOrCreateAndGetLogFileSegmentFromCache(new SegmentNameEntity(this.currentLogFileSegment.getMessageOffset() + this.currentLogFileSegment.getSegmentNameEntity().getMessageOffset()));
         }
 
         this.currentLogFileSegment.append(payload);
@@ -73,16 +71,16 @@ public class LogFile {
             int mid = low + (high - low) / 2;
 
             if (segmentNameEntities[mid].getMessageOffset() == targetMessageOffset) {
-                return new LogFileSegment(this.logDirPath.toString(), segmentNameEntities[mid]);
+                return this.getOrCreateAndGetLogFileSegmentFromCache(segmentNameEntities[mid]);
             } else if (segmentNameEntities[mid].getMessageOffset() > targetMessageOffset) {
                 if (mid - 1 >= 0 && segmentNameEntities[mid - 1].getMessageOffset() <= targetMessageOffset) {
-                    return new LogFileSegment(this.logDirPath.toString(), segmentNameEntities[mid - 1]);
+                    return this.getOrCreateAndGetLogFileSegmentFromCache(segmentNameEntities[mid - 1]);
                 } else {
                     high = mid - 1;
                 }
             } else {
                 if (mid + 1 <= high && segmentNameEntities[mid + 1].getMessageOffset() > targetMessageOffset) {
-                    return new LogFileSegment(this.logDirPath.toString(), segmentNameEntities[mid]);
+                    return this.getOrCreateAndGetLogFileSegmentFromCache(segmentNameEntities[mid]);
                 } else {
                     low = mid + 1;
                 }
@@ -111,7 +109,7 @@ public class LogFile {
                 .toArray(String[]::new);
 
         if (segments.length == 0) {
-            return new LogFileSegment(logDirPath.toString(), new SegmentNameEntity(0));
+            return this.getOrCreateAndGetLogFileSegmentFromCache(new SegmentNameEntity(0));
         } else {
             long maxOffsetSoFar = Long.MIN_VALUE;
             SegmentNameEntity segmentNameEntityOfInterest = null;
@@ -125,7 +123,7 @@ public class LogFile {
                 }
             }
 
-            return new LogFileSegment(logDirPath.toString(), segmentNameEntityOfInterest);
+            return this.getOrCreateAndGetLogFileSegmentFromCache(segmentNameEntityOfInterest);
         }
     }
 
@@ -145,5 +143,13 @@ public class LogFile {
         }
 
         return logDirPath;
+    }
+
+    private LogFileSegment getOrCreateAndGetLogFileSegmentFromCache(SegmentNameEntity segmentNameEntity) throws IOException {
+        if (this.logFileSegmentCache.get(segmentNameEntity) == null) {
+            this.logFileSegmentCache.put(segmentNameEntity, new LogFileSegment(this.logDirPath.toString(), segmentNameEntity));
+        }
+
+        return this.logFileSegmentCache.get(segmentNameEntity);
     }
 }

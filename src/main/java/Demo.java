@@ -14,7 +14,7 @@ public class Demo {
 
     public static void main(String[] args) throws InterruptedException, IOException {
 
-        LogFile logFile = new LogFile(DIR, "tracking-service");
+        LogFile logFile = new LogFile(DIR, "tracking-service", 1024L, 1024);
 
         List<Thread> threads = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
