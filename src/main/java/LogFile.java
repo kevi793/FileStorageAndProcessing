@@ -26,6 +26,8 @@ public class LogFile {
     private LogFileSegment currentLogFileSegment;
     private Path logDirPath;
 
+    //private Callable<>
+
     public LogFile(String dataDirPath, String name, Long maxSegmentLogFileSizeInBytes, Integer logFileSegmentCacheSize) throws IOException {
         this.dataDirPath = dataDirPath;
         this.name = name;
@@ -37,21 +39,20 @@ public class LogFile {
     public synchronized void write(Object payload) throws IOException {
 
         if (this.currentLogFileSegment.getSegmentLogFileSize() >= this.maxSegmentLogFileSizeInBytes) {
-            this.currentLogFileSegment = this.getOrCreateAndGetLogFileSegmentFromCache(new SegmentNameEntity(this.currentLogFileSegment.getMessageOffset() + this.currentLogFileSegment.getSegmentNameEntity().getMessageOffset()));
+            this.currentLogFileSegment = this.getOrCreateAndGetLogFileSegmentFromCache(new SegmentNameEntity(this.currentLogFileSegment.getMessageOffset() + this.currentLogFileSegment.getSegmentNameEntity().getNumberOfMessagesBefore()));
         }
 
         this.currentLogFileSegment.append(payload);
     }
 
     public String read(long offset) throws IOException {
-
         LogFileSegment logFileSegment = this.getLogFileSegment(offset);
         if (logFileSegment == null) {
             log.error("Invalid message offset provided: {}", offset);
             return EMPTY_STRING;
         }
 
-        return logFileSegment.read(offset - logFileSegment.getSegmentNameEntity().getMessageOffset());
+        return logFileSegment.read(offset - logFileSegment.getSegmentNameEntity().getNumberOfMessagesBefore());
     }
 
     private LogFileSegment getLogFileSegment(long targetMessageOffset) throws IOException {
@@ -62,7 +63,7 @@ public class LogFile {
                 .map(SegmentNameEntity::from)
                 .toArray(SegmentNameEntity[]::new);
 
-        Arrays.sort(segmentNameEntities, Comparator.comparingLong(SegmentNameEntity::getMessageOffset));
+        Arrays.sort(segmentNameEntities, Comparator.comparingLong(SegmentNameEntity::getNumberOfMessagesBefore));
 
         int low = 0;
         int high = segmentNameEntities.length - 1;
@@ -70,16 +71,16 @@ public class LogFile {
         while (low <= high) {
             int mid = low + (high - low) / 2;
 
-            if (segmentNameEntities[mid].getMessageOffset() == targetMessageOffset) {
+            if (segmentNameEntities[mid].getNumberOfMessagesBefore() == targetMessageOffset) {
                 return this.getOrCreateAndGetLogFileSegmentFromCache(segmentNameEntities[mid]);
-            } else if (segmentNameEntities[mid].getMessageOffset() > targetMessageOffset) {
-                if (mid - 1 >= 0 && segmentNameEntities[mid - 1].getMessageOffset() <= targetMessageOffset) {
+            } else if (segmentNameEntities[mid].getNumberOfMessagesBefore() > targetMessageOffset) {
+                if (mid - 1 >= 0 && segmentNameEntities[mid - 1].getNumberOfMessagesBefore() <= targetMessageOffset) {
                     return this.getOrCreateAndGetLogFileSegmentFromCache(segmentNameEntities[mid - 1]);
                 } else {
                     high = mid - 1;
                 }
             } else {
-                if (mid + 1 <= high && segmentNameEntities[mid + 1].getMessageOffset() > targetMessageOffset) {
+                if (mid + 1 <= high && segmentNameEntities[mid + 1].getNumberOfMessagesBefore() > targetMessageOffset) {
                     return this.getOrCreateAndGetLogFileSegmentFromCache(segmentNameEntities[mid]);
                 } else {
                     low = mid + 1;
@@ -101,7 +102,6 @@ public class LogFile {
     }
 
     private LogFileSegment getLatestOrCreateSegmentIfNotExists() throws IOException {
-        Path logDirPath = Paths.get(this.dataDirPath, this.name);
 
         String[] segments = Files.list(this.logDirPath).map(path -> path.getFileName().toString())
                 .filter(fileName -> fileName.startsWith(SEGMENT))
@@ -117,8 +117,8 @@ public class LogFile {
             for (String segment : segments) {
                 SegmentNameEntity segmentNameEntity = SegmentNameEntity.from(segment);
 
-                if (segmentNameEntity.getMessageOffset() > maxOffsetSoFar) {
-                    maxOffsetSoFar = segmentNameEntity.getMessageOffset();
+                if (segmentNameEntity.getNumberOfMessagesBefore() > maxOffsetSoFar) {
+                    maxOffsetSoFar = segmentNameEntity.getNumberOfMessagesBefore();
                     segmentNameEntityOfInterest = segmentNameEntity;
                 }
             }

@@ -4,7 +4,11 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.file.*;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 
 @Slf4j
@@ -21,7 +25,7 @@ public class LogFileSegment {
 
     private Path segmentLogFilePath;
     private Path segmentIndexFilePath;
-    private long messageOffset = 0;
+    private int messageOffset = 0;
 
     public LogFileSegment(String directory, SegmentNameEntity segmentNameEntity) throws IOException {
         this.directory = directory;
@@ -46,7 +50,7 @@ public class LogFileSegment {
 
     public String read(long offset) throws IOException {
         List<String> indexFileLines = Files.readAllLines(this.segmentIndexFilePath);
-        LogIndexEntity logIndexEntity = LogIndexEntity.from(indexFileLines.get((int)offset));
+        LogIndexEntity logIndexEntity = LogIndexEntity.from(indexFileLines.get((int) offset));
 
         File segmentLogFile = new File(this.segmentLogFilePath.toString());
         RandomAccessFile randomAccessFile = new RandomAccessFile(segmentLogFile, "r");

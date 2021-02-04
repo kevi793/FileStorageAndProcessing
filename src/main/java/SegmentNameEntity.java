@@ -5,11 +5,11 @@ import lombok.Getter;
 public class SegmentNameEntity {
 
     private static final String DELIMITER = "-";
-    private final long messageOffset;
+    private final long numberOfMessagesBefore;
     private final String namePrefix = "segment";
 
-    public SegmentNameEntity(long messageOffset) {
-        this.messageOffset = messageOffset;
+    public SegmentNameEntity(long numberOfMessagesBefore) {
+        this.numberOfMessagesBefore = numberOfMessagesBefore;
     }
 
     public static SegmentNameEntity from(String serializedSegmentName) {
@@ -24,6 +24,6 @@ public class SegmentNameEntity {
 
     @Override
     public String toString() {
-        return String.format("%s%s%d", this.namePrefix, DELIMITER, this.messageOffset);
+        return String.format("%s%s%d", this.namePrefix, DELIMITER, this.numberOfMessagesBefore);
     }
 }
