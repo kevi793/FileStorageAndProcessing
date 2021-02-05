@@ -9,10 +9,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.function.Consumer;
 
 @Slf4j
 @Getter
-public class LogFile {
+public class LogFile<T> {
     public static final long DEFAULT_MAX_SEGMENT_LOG_FILE_SIZE_IN_BYTES = 1024L;
     public static final String EMPTY_STRING = "";
     private static final String SEGMENT = "segment";
@@ -22,17 +23,19 @@ public class LogFile {
     private final String dataDirPath;
     private final Long maxSegmentLogFileSizeInBytes;
     private final Cache<SegmentNameEntity, LogFileSegment> logFileSegmentCache;
-
+    private final Class<T> clazz;
+    private final Consumer<T> consumer;
     private LogFileSegment currentLogFileSegment;
     private Path logDirPath;
+    private LogProcessor<T> logProcessor;
 
-    //private Callable<>
-
-    public LogFile(String dataDirPath, String name, Long maxSegmentLogFileSizeInBytes, Integer logFileSegmentCacheSize) throws IOException {
+    public LogFile(String dataDirPath, String name, Long maxSegmentLogFileSizeInBytes, Integer logFileSegmentCacheSize, Consumer<T> consumer, Class<T> clazz) throws IOException {
         this.dataDirPath = dataDirPath;
         this.name = name;
         this.maxSegmentLogFileSizeInBytes = maxSegmentLogFileSizeInBytes;
         this.logFileSegmentCache = new FIFOCache<>(logFileSegmentCacheSize);
+        this.clazz = clazz;
+        this.consumer = consumer;
         this.init();
     }
 
@@ -45,14 +48,21 @@ public class LogFile {
         this.currentLogFileSegment.append(payload);
     }
 
-    public String read(long offset) throws IOException {
+    public T read(long offset) throws IOException {
         LogFileSegment logFileSegment = this.getLogFileSegment(offset);
         if (logFileSegment == null) {
             log.error("Invalid message offset provided: {}", offset);
-            return EMPTY_STRING;
+            return null;
         }
 
-        return logFileSegment.read(offset - logFileSegment.getSegmentNameEntity().getNumberOfMessagesBefore());
+        if (logFileSegment.getMessageOffset() == 0) {
+            log.debug("Segment is empty");
+            return null;
+        }
+
+        String logMessageString = logFileSegment.read(offset - logFileSegment.getSegmentNameEntity().getNumberOfMessagesBefore());
+        LogMessage logMessage = LogMessage.from(logMessageString);
+        return logMessage.getPayload(this.clazz);
     }
 
     private LogFileSegment getLogFileSegment(long targetMessageOffset) throws IOException {
@@ -99,6 +109,9 @@ public class LogFile {
     private void init() throws IOException {
         this.logDirPath = this.getLogDirOrCreateIfNotExists();
         this.currentLogFileSegment = this.getLatestOrCreateSegmentIfNotExists();
+        this.logProcessor = new LogProcessor<>(this.consumer, this.logDirPath, this);
+        this.logProcessor.setDaemon(true);
+        this.logProcessor.start();
     }
 
     private LogFileSegment getLatestOrCreateSegmentIfNotExists() throws IOException {
@@ -152,4 +165,6 @@ public class LogFile {
 
         return this.logFileSegmentCache.get(segmentNameEntity);
     }
+
+
 }

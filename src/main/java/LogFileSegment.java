@@ -50,6 +50,11 @@ public class LogFileSegment {
 
     public String read(long offset) throws IOException {
         List<String> indexFileLines = Files.readAllLines(this.segmentIndexFilePath);
+
+        if (indexFileLines.size() == 0) {
+            return null;
+        }
+
         LogIndexEntity logIndexEntity = LogIndexEntity.from(indexFileLines.get((int) offset));
 
         File segmentLogFile = new File(this.segmentLogFilePath.toString());
@@ -111,8 +116,10 @@ public class LogFileSegment {
         } catch (FileAlreadyExistsException e) {
             log.debug("Segment index file at path: {} already exists.", path.toString());
             List<String> lines = Files.readAllLines(path);
-            LogIndexEntity lastIndex = LogIndexEntity.from(lines.get(lines.size() - 1));
-            this.messageOffset = lastIndex.getMessageOffset() + 1;
+            if (lines.size() > 0) {
+                LogIndexEntity lastIndex = LogIndexEntity.from(lines.get(lines.size() - 1));
+                this.messageOffset = lastIndex.getMessageOffset() + 1;
+            }
             return path;
         } catch (IOException ex) {
             log.error("Failed to create segment index file: {}", path.toString());

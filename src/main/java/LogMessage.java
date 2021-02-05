@@ -35,16 +35,16 @@ public class LogMessage {
 
     public static LogMessage from(String serializedLogMessage) throws JsonProcessingException {
         int offsetStartIndex = serializedLogMessage.indexOf(KEY_VALUE_SEPARATOR) + 1;
-        int offsetEndIndex = serializedLogMessage.indexOf(PROPERTY_SEPARATOR, offsetStartIndex) - 1;
-        int offset = Integer.parseInt(serializedLogMessage.substring(offsetStartIndex, offsetEndIndex - offsetStartIndex + 1));
+        int offsetEndIndex = serializedLogMessage.indexOf(PROPERTY_SEPARATOR, offsetStartIndex);
+        int offset = Integer.parseInt(serializedLogMessage.substring(offsetStartIndex, offsetEndIndex));
 
         int createTimeStartIndex = serializedLogMessage.indexOf(KEY_VALUE_SEPARATOR, offsetEndIndex) + 1;
-        int createTimeEndIndex = serializedLogMessage.indexOf(PROPERTY_SEPARATOR, createTimeStartIndex) - 1;
-        Timestamp createTime = new Timestamp(Long.parseLong(serializedLogMessage.substring(createTimeStartIndex, createTimeEndIndex - createTimeStartIndex + 1)));
+        int createTimeEndIndex = serializedLogMessage.indexOf(PROPERTY_SEPARATOR, createTimeStartIndex);
+        Timestamp createTime = new Timestamp(Long.parseLong(serializedLogMessage.substring(createTimeStartIndex, createTimeEndIndex)));
 
         int payloadStartIndex = serializedLogMessage.indexOf(KEY_VALUE_SEPARATOR, createTimeEndIndex) + 1;
         int payloadEndIndex = serializedLogMessage.length() - 1;
-        String payload = serializedLogMessage.substring(payloadStartIndex, payloadEndIndex - payloadStartIndex + 1);
+        String payload = serializedLogMessage.substring(payloadStartIndex, payloadEndIndex);
 
         return new LogMessage(offset, createTime, payload);
     }
