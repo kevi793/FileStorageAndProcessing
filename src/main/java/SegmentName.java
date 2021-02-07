@@ -2,24 +2,24 @@ import exception.MalformedSegmentNameException;
 import lombok.Getter;
 
 @Getter
-public class SegmentNameEntity {
+public class SegmentName {
 
     private static final String DELIMITER = "-";
     private final long numberOfMessagesBefore;
     private final String namePrefix = "segment";
 
-    public SegmentNameEntity(long numberOfMessagesBefore) {
+    public SegmentName(long numberOfMessagesBefore) {
         this.numberOfMessagesBefore = numberOfMessagesBefore;
     }
 
-    public static SegmentNameEntity from(String serializedSegmentName) {
+    public static SegmentName from(String serializedSegmentName) {
         String[] tokens = serializedSegmentName.split(DELIMITER);
 
         if (tokens.length != 2) {
             throw new MalformedSegmentNameException(String.format("Given segment name %s is not valid.", serializedSegmentName));
         }
 
-        return new SegmentNameEntity(Long.parseLong(tokens[1]));
+        return new SegmentName(Long.parseLong(tokens[1]));
     }
 
     @Override

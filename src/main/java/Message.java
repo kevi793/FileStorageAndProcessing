@@ -7,7 +7,7 @@ import java.sql.Timestamp;
 import java.util.Date;
 
 @Getter
-public class LogMessage {
+public class Message {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String MESSAGE_OFFSET = "offset";
@@ -21,19 +21,19 @@ public class LogMessage {
     private final String payloadString;
     private final Timestamp createTime;
 
-    public LogMessage(int offset, Object payload) throws JsonProcessingException {
+    public Message(int offset, Object payload) throws JsonProcessingException {
         this.messageOffset = offset;
         this.createTime = new Timestamp(new Date().getTime());
         this.payloadString = objectMapper.writeValueAsString(payload);
     }
 
-    public LogMessage(int offset, Timestamp createTime, String payloadString) {
+    public Message(int offset, Timestamp createTime, String payloadString) {
         this.messageOffset = offset;
         this.createTime = createTime;
         this.payloadString = payloadString;
     }
 
-    public static LogMessage from(String serializedLogMessage) throws JsonProcessingException {
+    public static Message from(String serializedLogMessage) throws JsonProcessingException {
         int offsetStartIndex = serializedLogMessage.indexOf(KEY_VALUE_SEPARATOR) + 1;
         int offsetEndIndex = serializedLogMessage.indexOf(PROPERTY_SEPARATOR, offsetStartIndex);
         int offset = Integer.parseInt(serializedLogMessage.substring(offsetStartIndex, offsetEndIndex));
@@ -43,10 +43,10 @@ public class LogMessage {
         Timestamp createTime = new Timestamp(Long.parseLong(serializedLogMessage.substring(createTimeStartIndex, createTimeEndIndex)));
 
         int payloadStartIndex = serializedLogMessage.indexOf(KEY_VALUE_SEPARATOR, createTimeEndIndex) + 1;
-        int payloadEndIndex = serializedLogMessage.length() - 1;
+        int payloadEndIndex = serializedLogMessage.length();
         String payload = serializedLogMessage.substring(payloadStartIndex, payloadEndIndex);
 
-        return new LogMessage(offset, createTime, payload);
+        return new Message(offset, createTime, payload);
     }
 
     public <T> T getPayload(Class<T> clazz) throws JsonProcessingException {

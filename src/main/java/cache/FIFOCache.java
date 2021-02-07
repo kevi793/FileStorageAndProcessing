@@ -7,6 +7,10 @@ import java.util.HashMap;
 import java.util.List;
 
 @Slf4j
+/**
+ * An implementation of Cache.
+ * When the cache is full, the key that came the earliest is removed.
+ */
 public class FIFOCache<K, V> implements Cache<K, V> {
 
     private final int cacheSize;
@@ -25,7 +29,6 @@ public class FIFOCache<K, V> implements Cache<K, V> {
             log.debug("Updating value for key: {}", key.toString());
             this.list.set(this.map.get(key), new Node<>(key, value));
         } else {
-
             if (this.list.size() == this.cacheSize) {
                 log.debug("Cache is full. Need to evict: {}", this.list.get(0).key.toString());
                 this.map.remove(this.list.get(0).key);
@@ -53,13 +56,11 @@ public class FIFOCache<K, V> implements Cache<K, V> {
         private final K key;
         private final V value;
 
-
         private Node(K key, V value) {
             this.key = key;
             this.value = value;
         }
     }
-
 }
 
 

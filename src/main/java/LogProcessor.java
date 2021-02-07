@@ -10,22 +10,22 @@ import java.util.function.Consumer;
 @Slf4j
 public class LogProcessor<T> extends Thread {
 
-    private static final String fileName = "processed.log";
+    private static final String FILE_NAME = "processed.log";
     private static final int WAIT_TIME_IN_MS = 10000;
     private final Consumer<T> consumer;
     private final Path filePath;
-    private final LogFile<T> logFile;
+    private final FileStore<T> fileStore;
     private Long messageNumber = 0L;
 
-    public LogProcessor(Consumer<T> consumer, Path logDirPath, LogFile<T> logFile) throws IOException {
+    public LogProcessor(Consumer<T> consumer, Path logDirPath, FileStore<T> fileStore) throws IOException {
         this.consumer = consumer;
-        this.filePath = Paths.get(logDirPath.toString(), fileName);
-        this.logFile = logFile;
+        this.filePath = Paths.get(logDirPath.toString(), FILE_NAME);
+        this.fileStore = fileStore;
         this.init();
     }
 
     private void init() throws IOException {
-        log.debug("Create file to store processed logs offset.");
+        log.debug("Try to create file to store processed logs offset at path {}.", this.filePath);
         if (Files.exists(this.filePath)) {
             log.info("{} already exists.", this.filePath);
             byte[] content = Files.readAllBytes(this.filePath);
@@ -42,7 +42,7 @@ public class LogProcessor<T> extends Thread {
         while (true) {
             try {
                 log.debug("Trying to read messageNumber {}", this.messageNumber);
-                T payload = this.logFile.read(messageNumber);
+                T payload = this.fileStore.read(messageNumber);
 
                 if (payload == null) {
                     log.debug("messageNumber does not exist");

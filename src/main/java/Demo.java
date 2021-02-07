@@ -15,13 +15,16 @@ public class Demo {
 
     public static void main(String[] args) throws InterruptedException, IOException {
 
-        Consumer<String> consumer = (c) -> System.out.println("Got from consumer: " + c);
+        Consumer<Item> consumer = (c) -> System.out.println("Got from consumer: " + c);
 
-        LogFile logFile = new LogFile<>(DIR, "tracking-service", 1024L, 1024, consumer, String.class);
+        FileStore fileStore = new FileStore.FileStoreBuilder<Item>(DIR, "tracking-service", consumer, Item.class)
+                .fileSegmentCacheSize(1024)
+                .maxSegmentLogFileSizeInBytes(1024L)
+                .build();
 
         List<Thread> threads = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
-            threads.add(new GenerateLogItem(logFile));
+            threads.add(new GenerateLogItem(fileStore));
             threads.get(i).start();
         }
 
@@ -34,17 +37,17 @@ public class Demo {
 
     private static class GenerateLogItem extends Thread {
 
-        private final LogFile logFile;
+        private final FileStore fileStore;
 
-        public GenerateLogItem(LogFile logFile) {
-            this.logFile = logFile;
+        public GenerateLogItem(FileStore fileStore) {
+            this.fileStore = fileStore;
         }
 
         @SneakyThrows
         @Override
         public void run() {
             for (int i = 0; i < 20; ) {
-                logFile.write(new Item(Thread.currentThread().getName(), new Random().nextInt()));
+                fileStore.write(new Item(Thread.currentThread().getName(), new Random().nextInt()));
                 Thread.sleep(100);
             }
         }
