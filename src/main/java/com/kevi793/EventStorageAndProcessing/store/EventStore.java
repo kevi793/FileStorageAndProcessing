@@ -80,7 +80,7 @@ public class EventStore<T> {
                 .map(SegmentName::from)
                 .map(segmentName -> {
                     try {
-                        return new Segment(this.dataDirPath, segmentName);
+                        return new Segment(this.logDirPath.toString(), segmentName);
                     } catch (IOException e) {
                         e.printStackTrace();
                         return null;
