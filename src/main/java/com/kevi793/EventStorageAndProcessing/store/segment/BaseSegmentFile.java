@@ -9,21 +9,29 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
 @Slf4j
-public abstract class BaseEventSegment {
+public abstract class BaseSegmentFile {
 
     protected final Path filePath;
 
-    public BaseEventSegment(Path filePath) throws IOException {
+    public BaseSegmentFile(Path filePath) throws IOException {
         this.filePath = filePath;
         this.createSegmentFileIfNotExists();
     }
 
-    public void write(String payload) throws IOException {
+    public void append(String payload) throws IOException {
         Files.write(this.filePath, Util.appendNewLine(payload).getBytes(), StandardOpenOption.APPEND);
     }
 
     public long getFileSize() throws IOException {
         return Files.size(this.filePath);
+    }
+
+    public void deleteFile() throws IOException {
+        if (Files.exists(this.filePath)) {
+            log.debug("Trying to delete {}.", this.filePath);
+            Files.delete(this.filePath);
+            log.debug("Successfully deleted {}.", this.filePath);
+        }
     }
 
     private void createSegmentFileIfNotExists() throws IOException {

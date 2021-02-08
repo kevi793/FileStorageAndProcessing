@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 @Slf4j
-public class EventIndexSegment extends BaseEventSegment {
+public class EventIndexSegment extends BaseSegmentFile {
 
     public EventIndexSegment(Path eventIndexSegmentFilePath) throws IOException {
         super(eventIndexSegmentFilePath);

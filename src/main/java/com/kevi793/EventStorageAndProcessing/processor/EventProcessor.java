@@ -1,68 +1,55 @@
 package com.kevi793.EventStorageAndProcessing.processor;
 
 import com.kevi793.EventStorageAndProcessing.store.EventStore;
+import com.kevi793.EventStorageAndProcessing.store.ProcessedEventsTracker;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.function.Consumer;
 
 @Slf4j
 public class EventProcessor<T> extends Thread {
-
-    private static final String FILE_NAME = "processed.log";
-    private static final int WAIT_TIME_IN_MS = 10000;
     private final Consumer<T> consumer;
-    private final Path filePath;
     private final EventStore<T> eventStore;
+    private final ProcessedEventsTracker processedEventsTracker;
+    private final long waitTimeInMs;
     private Long eventNumber = 0L;
 
-    public EventProcessor(Consumer<T> consumer, Path logDirPath, EventStore<T> eventStore) throws IOException {
+    public EventProcessor(ProcessedEventsTracker tracker, Consumer<T> consumer, EventStore<T> eventStore, long waitTimeInMs) throws IOException {
+        this.processedEventsTracker = tracker;
         this.consumer = consumer;
-        this.filePath = Paths.get(logDirPath.toString(), FILE_NAME);
         this.eventStore = eventStore;
-        this.init();
-    }
-
-    private void init() throws IOException {
-        log.debug("Try to create file to store processed logs offset at path {}.", this.filePath);
-        if (Files.exists(this.filePath)) {
-            log.info("{} already exists.", this.filePath);
-            byte[] content = Files.readAllBytes(this.filePath);
-            if (content.length > 0) {
-                this.eventNumber = Long.parseLong(new String(content));
-            }
-        } else {
-            Files.createFile(this.filePath);
-        }
+        this.eventNumber = tracker.getNumberOfEventsProcessedSoFar();
+        this.waitTimeInMs = waitTimeInMs;
     }
 
     @Override
     public void run() {
         while (true) {
+
+            if (Thread.currentThread().isInterrupted()) {
+                log.debug("Event processor thread is interrupted. Shutting down!");
+                break;
+            }
+
             try {
                 log.debug("Trying to read eventNumber {}", this.eventNumber);
-                T payload = this.eventStore.read(eventNumber);
+                T payload = this.eventStore.read(this.eventNumber);
 
                 if (payload == null) {
-                    log.debug("eventNumber does not exist");
-                    Thread.sleep(WAIT_TIME_IN_MS);
+                    log.debug("The eventNumber {} does not exist.", this.eventNumber);
+                    Thread.sleep(this.waitTimeInMs);
                 } else {
-                    log.debug("Calling consumer for eventNumber {}", eventNumber);
+                    log.debug("Calling consumer for eventNumber {}.", eventNumber);
                     this.consumer.accept(payload);
                     eventNumber++;
-                    log.debug("Updating eventNumber {} in {}.", eventNumber, this.filePath);
-                    Files.write(this.filePath, eventNumber.toString().getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
-                    log.debug("Successfully updated eventNumber {} in {}.", eventNumber, this.filePath);
+                    this.processedEventsTracker.write(this.eventNumber);
                 }
             } catch (IOException | InterruptedException e) {
                 log.error("Error occurred while processing eventNumber {}", eventNumber);
-                log.error("Exception is: {}", e);
+                log.error("Exception is: {}.", e);
                 try {
-                    Thread.sleep(WAIT_TIME_IN_MS);
+                    Thread.sleep(this.waitTimeInMs);
                 } catch (InterruptedException interruptedException) {
                     interruptedException.printStackTrace();
                 }

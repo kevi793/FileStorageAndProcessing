@@ -4,9 +4,9 @@ import com.kevi793.EventStorageAndProcessing.Constant;
 import com.kevi793.EventStorageAndProcessing.cache.Cache;
 import com.kevi793.EventStorageAndProcessing.cache.FIFOCache;
 import com.kevi793.EventStorageAndProcessing.processor.EventProcessor;
+import com.kevi793.EventStorageAndProcessing.purge.SegmentCleaner;
 import com.kevi793.EventStorageAndProcessing.store.segment.Segment;
 import com.kevi793.EventStorageAndProcessing.store.segment.SegmentName;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -15,13 +15,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 @Slf4j
-@Getter
 public class EventStore<T> {
     public static final long DEFAULT_MAX_SEGMENT_LOG_FILE_SIZE_IN_BYTES = 1024L;
     private static final String SEGMENT = "segment";
+    private static final String PROCESSED_EVENTS_TRACKER_FILE_NAME = "processed.log";
+    private static final long DEFAULT_SEGMENT_CLEANUP_TIME_INTERVAL = 10;
+    private static final long DEFAULT_EVENT_PROCESSOR_WAIT_TIME = 10;
 
     private String name;
     private String dataDirPath;
@@ -30,10 +33,13 @@ public class EventStore<T> {
     private Class<T> clazz;
     private Consumer<T> consumer;
     private int segmentCacheSize;
+    private long segmentCleanupTimeIntervalInMs = DEFAULT_SEGMENT_CLEANUP_TIME_INTERVAL;
+    private long eventProcessorWaitTimeInMs = DEFAULT_EVENT_PROCESSOR_WAIT_TIME;
 
     private Segment currentSegment;
     private Path logDirPath;
     private EventProcessor<T> eventProcessor;
+    private SegmentCleaner segmentCleaner;
 
     private EventStore() {
     }
@@ -64,6 +70,24 @@ public class EventStore<T> {
         String serializedEvent = segment.read(eventOffsetWithinSegment);
         Event event = Event.from(serializedEvent);
         return event.getPayload(this.clazz);
+    }
+
+    public Segment[] getAllSegments() throws IOException {
+        return Files.list(this.logDirPath).map(path -> path.getFileName().toString())
+                .filter(fileName -> fileName.startsWith(SEGMENT))
+                .map(this::getSegmentFileNameWithoutExtension)
+                .distinct()
+                .map(SegmentName::from)
+                .map(segmentName -> {
+                    try {
+                        return new Segment(this.dataDirPath, segmentName);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toArray(Segment[]::new);
     }
 
     private Segment getSegment(long targetEventOffset) throws IOException {
@@ -111,9 +135,18 @@ public class EventStore<T> {
         this.logDirPath = this.getLogDirOrCreateIfNotExists();
         this.segmentCache = new FIFOCache<>(this.segmentCacheSize);
         this.currentSegment = this.getLatestOrCreateSegmentIfNotExists();
-        this.eventProcessor = new EventProcessor<>(this.consumer, this.logDirPath, this);
+
+        ProcessedEventsTracker processedEventsTracker = new ProcessedEventsTracker(Paths.get(this.logDirPath.toString(), PROCESSED_EVENTS_TRACKER_FILE_NAME));
+
+        // start event processor thread
+        this.eventProcessor = new EventProcessor<>(processedEventsTracker, this.consumer, this, this.eventProcessorWaitTimeInMs);
         this.eventProcessor.setDaemon(true);
         this.eventProcessor.start();
+
+        // start segment cleaner thread
+        this.segmentCleaner = new SegmentCleaner(processedEventsTracker, this, this.segmentCleanupTimeIntervalInMs);
+        this.segmentCleaner.setDaemon(true);
+        this.segmentCleaner.start();
     }
 
     private Segment getLatestOrCreateSegmentIfNotExists() throws IOException {
@@ -184,6 +217,16 @@ public class EventStore<T> {
 
         public EventStoreBuilder<T> maxSegmentLogFileSizeInBytes(long maxSegmentLogFileSize) {
             this.eventStore.maxEventLogSegmentFileSizeInBytes = maxSegmentLogFileSize;
+            return this;
+        }
+
+        public EventStoreBuilder<T> segmentCleanupTimeIntervalInMs(long segmentCleanupTimeIntervalInMs) {
+            this.eventStore.segmentCleanupTimeIntervalInMs = segmentCleanupTimeIntervalInMs;
+            return this;
+        }
+
+        public EventStoreBuilder<T> eventProcessorWaitTimeInMs(long eventProcessorWaitTimeInMs) {
+            this.eventStore.eventProcessorWaitTimeInMs = eventProcessorWaitTimeInMs;
             return this;
         }
 

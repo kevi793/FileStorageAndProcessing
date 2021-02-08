@@ -45,10 +45,10 @@ public class Segment {
     public void write(Object payload) throws IOException {
         long currentLogSegmentFileSize = this.eventLogSegment.getFileSize();
         String messageString = new Event(this.eventOffset, payload).toString();
-        this.eventLogSegment.write(messageString);
+        this.eventLogSegment.append(messageString);
 
         EventIndex eventIndex = new EventIndex(this.eventOffset, currentLogSegmentFileSize, messageString.length());
-        this.eventIndexSegment.write(eventIndex.toString());
+        this.eventIndexSegment.append(eventIndex.toString());
 
         this.eventOffset++;
     }
@@ -66,6 +66,11 @@ public class Segment {
 
     public long getEventLogSegmentFileSize() throws IOException {
         return this.eventLogSegment.getFileSize();
+    }
+
+    public void delete() throws IOException {
+        this.eventIndexSegment.deleteFile();
+        this.eventLogSegment.deleteFile();
     }
 
     private void createDirectoryIfDoesNotExist() throws IOException {

@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Path;
 
-public class EventLogSegment extends BaseEventSegment {
+public class EventLogSegment extends BaseSegmentFile {
 
     private static final String READ_MODE = "r";
 
