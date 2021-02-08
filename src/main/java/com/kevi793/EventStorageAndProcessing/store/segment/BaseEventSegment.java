@@ -1,6 +1,6 @@
-package com.kevi793.FileStorageAndProcessing.store.segment;
+package com.kevi793.EventStorageAndProcessing.store.segment;
 
-import com.kevi793.FileStorageAndProcessing.Util;
+import com.kevi793.EventStorageAndProcessing.Util;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -9,16 +9,16 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
 @Slf4j
-public abstract class AbstractSegmentFile {
+public abstract class BaseEventSegment {
 
     protected final Path filePath;
 
-    public AbstractSegmentFile(Path filePath) throws IOException {
+    public BaseEventSegment(Path filePath) throws IOException {
         this.filePath = filePath;
         this.createSegmentFileIfNotExists();
     }
 
-    public void append(String payload) throws IOException {
+    public void write(String payload) throws IOException {
         Files.write(this.filePath, Util.appendNewLine(payload).getBytes(), StandardOpenOption.APPEND);
     }
 

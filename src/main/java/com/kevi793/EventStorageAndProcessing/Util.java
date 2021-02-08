@@ -1,4 +1,4 @@
-package com.kevi793.FileStorageAndProcessing;
+package com.kevi793.EventStorageAndProcessing;
 
 public class Util {
 

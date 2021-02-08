@@ -1,17 +1,17 @@
-package com.kevi793.FileStorageAndProcessing.store.segment;
+package com.kevi793.EventStorageAndProcessing.store.segment;
 
-import com.kevi793.FileStorageAndProcessing.exception.MalformedSegmentNameException;
+import com.kevi793.EventStorageAndProcessing.exception.MalformedSegmentNameException;
 import lombok.Getter;
 
 @Getter
 public class SegmentName {
 
     private static final String DELIMITER = "-";
-    private final long numberOfMessagesBefore;
+    private final long numberOfEventsBefore;
     private final String namePrefix = "segment";
 
-    public SegmentName(long numberOfMessagesBefore) {
-        this.numberOfMessagesBefore = numberOfMessagesBefore;
+    public SegmentName(long numberOfEventsBefore) {
+        this.numberOfEventsBefore = numberOfEventsBefore;
     }
 
     public static SegmentName from(String serializedSegmentName) {
@@ -26,6 +26,6 @@ public class SegmentName {
 
     @Override
     public String toString() {
-        return String.format("%s%s%d", this.namePrefix, DELIMITER, this.numberOfMessagesBefore);
+        return String.format("%s%s%d", this.namePrefix, DELIMITER, this.numberOfEventsBefore);
     }
 }

@@ -1,4 +1,4 @@
-import com.kevi793.FileStorageAndProcessing.store.FileStore;
+import com.kevi793.EventStorageAndProcessing.store.EventStore;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
@@ -18,14 +18,14 @@ public class Demo {
 
         Consumer<Item> consumer = (c) -> System.out.println("Got from consumer: " + c);
 
-        FileStore fileStore = new FileStore.FileStoreBuilder<Item>(DIR, "tracking-service", consumer, Item.class)
+        EventStore eventStore = new EventStore.EventStoreBuilder<Item>(DIR, "tracking-service", consumer, Item.class)
                 .fileSegmentCacheSize(1024)
                 .maxSegmentLogFileSizeInBytes(1024L)
                 .build();
 
         List<Thread> threads = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
-            threads.add(new GenerateLogItem(fileStore));
+            threads.add(new GenerateLogItem(eventStore));
             threads.get(i).start();
         }
 
@@ -38,17 +38,17 @@ public class Demo {
 
     private static class GenerateLogItem extends Thread {
 
-        private final FileStore fileStore;
+        private final EventStore eventStore;
 
-        public GenerateLogItem(FileStore fileStore) {
-            this.fileStore = fileStore;
+        public GenerateLogItem(EventStore eventStore) {
+            this.eventStore = eventStore;
         }
 
         @SneakyThrows
         @Override
         public void run() {
             for (int i = 0; i < 20; ) {
-                fileStore.write(new Item(Thread.currentThread().getName(), new Random().nextInt()));
+                eventStore.write(new Item(Thread.currentThread().getName(), new Random().nextInt()));
                 Thread.sleep(100);
             }
         }

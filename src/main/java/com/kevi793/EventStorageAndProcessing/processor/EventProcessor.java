@@ -1,6 +1,6 @@
-package com.kevi793.FileStorageAndProcessing.processor;
+package com.kevi793.EventStorageAndProcessing.processor;
 
-import com.kevi793.FileStorageAndProcessing.store.FileStore;
+import com.kevi793.EventStorageAndProcessing.store.EventStore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -11,19 +11,19 @@ import java.nio.file.StandardOpenOption;
 import java.util.function.Consumer;
 
 @Slf4j
-public class LogProcessor<T> extends Thread {
+public class EventProcessor<T> extends Thread {
 
     private static final String FILE_NAME = "processed.log";
     private static final int WAIT_TIME_IN_MS = 10000;
     private final Consumer<T> consumer;
     private final Path filePath;
-    private final FileStore<T> fileStore;
-    private Long messageNumber = 0L;
+    private final EventStore<T> eventStore;
+    private Long eventNumber = 0L;
 
-    public LogProcessor(Consumer<T> consumer, Path logDirPath, FileStore<T> fileStore) throws IOException {
+    public EventProcessor(Consumer<T> consumer, Path logDirPath, EventStore<T> eventStore) throws IOException {
         this.consumer = consumer;
         this.filePath = Paths.get(logDirPath.toString(), FILE_NAME);
-        this.fileStore = fileStore;
+        this.eventStore = eventStore;
         this.init();
     }
 
@@ -33,7 +33,7 @@ public class LogProcessor<T> extends Thread {
             log.info("{} already exists.", this.filePath);
             byte[] content = Files.readAllBytes(this.filePath);
             if (content.length > 0) {
-                this.messageNumber = Long.parseLong(new String(content));
+                this.eventNumber = Long.parseLong(new String(content));
             }
         } else {
             Files.createFile(this.filePath);
@@ -44,22 +44,22 @@ public class LogProcessor<T> extends Thread {
     public void run() {
         while (true) {
             try {
-                log.debug("Trying to read messageNumber {}", this.messageNumber);
-                T payload = this.fileStore.read(messageNumber);
+                log.debug("Trying to read eventNumber {}", this.eventNumber);
+                T payload = this.eventStore.read(eventNumber);
 
                 if (payload == null) {
-                    log.debug("messageNumber does not exist");
+                    log.debug("eventNumber does not exist");
                     Thread.sleep(WAIT_TIME_IN_MS);
                 } else {
-                    log.debug("Calling consumer for messageNumber {}", messageNumber);
+                    log.debug("Calling consumer for eventNumber {}", eventNumber);
                     this.consumer.accept(payload);
-                    messageNumber++;
-                    log.debug("Updating messageNumber {} in {}.", messageNumber, this.filePath);
-                    Files.write(this.filePath, messageNumber.toString().getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
-                    log.debug("Successfully updated messageNumber {} in {}.", messageNumber, this.filePath);
+                    eventNumber++;
+                    log.debug("Updating eventNumber {} in {}.", eventNumber, this.filePath);
+                    Files.write(this.filePath, eventNumber.toString().getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
+                    log.debug("Successfully updated eventNumber {} in {}.", eventNumber, this.filePath);
                 }
             } catch (IOException | InterruptedException e) {
-                log.error("Error occurred while processing messageNumber {}", messageNumber);
+                log.error("Error occurred while processing eventNumber {}", eventNumber);
                 log.error("Exception is: {}", e);
                 try {
                     Thread.sleep(WAIT_TIME_IN_MS);

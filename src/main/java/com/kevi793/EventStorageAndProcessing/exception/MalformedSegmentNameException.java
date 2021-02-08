@@ -1,4 +1,4 @@
-package com.kevi793.FileStorageAndProcessing.exception;
+package com.kevi793.EventStorageAndProcessing.exception;
 
 public class MalformedSegmentNameException extends RuntimeException {
 

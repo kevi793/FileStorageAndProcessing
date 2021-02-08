@@ -1,16 +1,16 @@
-package com.kevi793.FileStorageAndProcessing.store.segment;
+package com.kevi793.EventStorageAndProcessing.store.segment;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Path;
 
-public class SegmentLogFile extends AbstractSegmentFile {
+public class EventLogSegment extends BaseEventSegment {
 
     private static final String READ_MODE = "r";
 
-    public SegmentLogFile(Path segmentLogFilePath) throws IOException {
-        super(segmentLogFilePath);
+    public EventLogSegment(Path eventLogSegmentFilePath) throws IOException {
+        super(eventLogSegmentFilePath);
     }
 
     public byte[] read(long offset, int size) throws IOException {
