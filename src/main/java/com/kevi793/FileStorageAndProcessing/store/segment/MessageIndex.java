@@ -1,3 +1,5 @@
+package com.kevi793.FileStorageAndProcessing.store.segment;
+
 import lombok.Getter;
 
 @Getter

@@ -1,5 +1,11 @@
-import cache.Cache;
-import cache.FIFOCache;
+package com.kevi793.FileStorageAndProcessing.store;
+
+import com.kevi793.FileStorageAndProcessing.Constant;
+import com.kevi793.FileStorageAndProcessing.cache.Cache;
+import com.kevi793.FileStorageAndProcessing.cache.FIFOCache;
+import com.kevi793.FileStorageAndProcessing.processor.LogProcessor;
+import com.kevi793.FileStorageAndProcessing.store.segment.FileSegment;
+import com.kevi793.FileStorageAndProcessing.store.segment.SegmentName;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 

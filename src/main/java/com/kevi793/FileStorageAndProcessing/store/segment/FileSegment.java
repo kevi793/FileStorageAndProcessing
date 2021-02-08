@@ -1,3 +1,7 @@
+package com.kevi793.FileStorageAndProcessing.store.segment;
+
+import com.kevi793.FileStorageAndProcessing.Constant;
+import com.kevi793.FileStorageAndProcessing.store.Message;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 

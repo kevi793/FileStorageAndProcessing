@@ -1,4 +1,6 @@
-import exception.MalformedSegmentNameException;
+package com.kevi793.FileStorageAndProcessing.store.segment;
+
+import com.kevi793.FileStorageAndProcessing.exception.MalformedSegmentNameException;
 import lombok.Getter;
 
 @Getter

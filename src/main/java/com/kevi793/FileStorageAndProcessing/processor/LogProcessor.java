@@ -1,3 +1,6 @@
+package com.kevi793.FileStorageAndProcessing.processor;
+
+import com.kevi793.FileStorageAndProcessing.store.FileStore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;

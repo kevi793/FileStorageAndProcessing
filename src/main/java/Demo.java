@@ -1,3 +1,4 @@
+import com.kevi793.FileStorageAndProcessing.store.FileStore;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;

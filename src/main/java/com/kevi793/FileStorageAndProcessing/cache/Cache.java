@@ -1,4 +1,4 @@
-package cache;
+package com.kevi793.FileStorageAndProcessing.cache;
 
 /**
  * Interface for Cache.
