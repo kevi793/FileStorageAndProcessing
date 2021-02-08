@@ -25,6 +25,12 @@ public class SegmentCleaner extends Thread {
     @Override
     public void run() {
         while (true) {
+
+            if (Thread.currentThread().isInterrupted()) {
+                log.debug("Segment Cleaner thread is interrupted. Shutting down!");
+                break;
+            }
+
             log.debug("Trying to find any segment to be deleted.");
             try {
                 Segment[] segments = this.eventStore.getAllSegments();
@@ -45,7 +51,8 @@ public class SegmentCleaner extends Thread {
                     log.debug("Going to sleep for {}.", this.cleanupInterval);
                     Thread.sleep(this.cleanupInterval);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    log.info("Segment cleaner thread is interrupted.");
+                    Thread.currentThread().interrupt();
                 }
             }
         }

@@ -13,7 +13,7 @@ public class EventProcessor<T> extends Thread {
     private final EventStore<T> eventStore;
     private final ProcessedEventsTracker processedEventsTracker;
     private final long waitTimeInMs;
-    private Long eventNumber = 0L;
+    private Long eventNumber;
 
     public EventProcessor(ProcessedEventsTracker tracker, Consumer<T> consumer, EventStore<T> eventStore, long waitTimeInMs) throws IOException {
         this.processedEventsTracker = tracker;
@@ -46,12 +46,12 @@ public class EventProcessor<T> extends Thread {
                     this.processedEventsTracker.write(this.eventNumber);
                 }
             } catch (IOException | InterruptedException e) {
-                log.error("Error occurred while processing eventNumber {}", eventNumber);
-                log.error("Exception is: {}.", e);
+                log.error("Error occurred while processing eventNumber {}. Exception is {}.", eventNumber, e);
                 try {
                     Thread.sleep(this.waitTimeInMs);
                 } catch (InterruptedException interruptedException) {
-                    interruptedException.printStackTrace();
+                    log.info("Event processor thread is interrupted.");
+                    Thread.currentThread().interrupt();
                 }
             }
         }
