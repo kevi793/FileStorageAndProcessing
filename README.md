@@ -1,7 +1,7 @@
 # FileStorageAndProcessing
 A library that helps with:
-* Accepting events and storing it reliably (flushing into file on disk)
-* Process the events (some business logic to perform on the event, given by the client)
+* Accepting events from the user and storing it reliably (flushing into file on disk).
+* Performing action on the events (action will be some task that needs to be performed on/using that event).
 * Purge the processed events.
 
 ## Usage: 
